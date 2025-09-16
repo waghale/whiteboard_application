@@ -1,150 +1,142 @@
 package com.example.whiteboard.activity
 
-import android.content.Intent
-import android.graphics.*
+
 import android.os.Bundle
-import android.view.MotionEvent
+
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.example.whiteboard.models.*
-import com.example.whiteboard.services.FileService
-import java.io.File
+
+
+
+import android.util.Log
+import android.widget.ProgressBar
+import android.widget.Toast
+import androidx.activity.viewModels
+
+import com.example.whiteboard.R
+import com.example.whiteboard.ui.ToolbarFragment
+import com.example.whiteboard.viewmodels.WhiteboardViewModel
+import com.example.whiteboard.views.DrawingView
+
+
+import android.content.pm.PackageManager
+
 
 class WhiteboardActivity : AppCompatActivity() {
+    private val viewModel: WhiteboardViewModel by viewModels()
+    private var isLoading = false
+    private var isSaving = false
 
-    private lateinit var fileService: FileService
-    private lateinit var whiteboardView: WhiteboardView
-    private var whiteboardState: WhiteboardState = WhiteboardState()
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("isSaving", isSaving)
+        outState.putBoolean("isLoading", isLoading)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_whiteboard)
 
-        fileService = FileService(this)
+        // Restore state
+        isSaving = savedInstanceState?.getBoolean("isSaving") ?: false
+        isLoading = savedInstanceState?.getBoolean("isLoading") ?: false
 
-        // Load file if passed
-        intent.getStringExtra("file_path")?.let { path ->
-            val file = File(path)
-            whiteboardState = fileService.load(file)
+        // Initialize DrawingView and set ViewModel
+        val drawingView = findViewById<DrawingView>(R.id.drawingView)
+        drawingView.viewModel = viewModel
+
+        // Initialize ProgressBar
+        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+
+        // Initialize ToolbarFragment
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.toolbarFragmentContainer, ToolbarFragment())
+                .commit()
         }
 
-        // Initialize custom canvas view
-        whiteboardView = WhiteboardView()
-        setContentView(whiteboardView)
-    }
-
-    inner class WhiteboardView : View(this@WhiteboardActivity) {
-
-        private val paint = Paint().apply {
-            color = Color.BLACK
-            strokeWidth = 5f
-            style = Paint.Style.STROKE
-            isAntiAlias = true
-        }
-
-        private val currentStroke = mutableListOf<PointF>()
-
-        init {
-            // Force background always white
-            setBackgroundColor(Color.WHITE)
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-
-            // Fill canvas with white (double safety, works even if background cleared)
-            canvas.drawColor(Color.WHITE)
-
-            // Draw saved strokes
-            whiteboardState.strokes.forEach { stroke ->
-                val p = Paint().apply {
-                    color = Color.parseColor(stroke.color)
-                    strokeWidth = stroke.width.toFloat()
-                    style = Paint.Style.STROKE
-                    isAntiAlias = true
+        // Handle file loading from intent
+        if (savedInstanceState == null) {
+            intent.getStringExtra("file_path")?.let { filePath ->
+                if (!isLoading && !isSaving) {
+                    isLoading = true
+                    Log.d("WhiteboardActivity", "Attempting to load file: $filePath")
+                    progressBar?.visibility = View.VISIBLE
+                    viewModel.load(this, filePath)
                 }
-                if (stroke.points.size > 1) {
-                    for (i in 0 until stroke.points.size - 1) {
-                        val pt1 = stroke.points[i]
-                        val pt2 = stroke.points[i + 1]
-                        canvas.drawLine(pt1.x, pt1.y, pt2.x, pt2.y, p)
+            }
+        }
+
+        // Observe ViewModel state changes
+        viewModel.state.observe(this) { state ->
+            Log.d("WhiteboardActivity", "State updated: ${state.shapes.size} shapes, ${state.shapes.count { it.type == WhiteboardViewModel.ShapeType.POLYGON }} polygons")
+            drawingView.invalidate()
+            if (isLoading || isSaving) {
+                progressBar?.visibility = View.GONE
+            }
+        }
+        viewModel.shapes.observe(this) { shapes ->
+            Log.d("WhiteboardActivity", "Shapes updated: ${shapes.size}")
+            drawingView.invalidate()
+        }
+        viewModel.textBoxes.observe(this) { textBoxes ->
+            Log.d("WhiteboardActivity", "TextBoxes updated: ${textBoxes.size}")
+            drawingView.invalidate()
+        }
+        viewModel.savedFile.observe(this) { filePath ->
+            Log.d("WhiteboardActivity", "savedFile triggered, isSaving=$isSaving, isLoading=$isLoading, filePath=$filePath")
+            if (isLoading) {
+                isLoading = false
+                progressBar?.visibility = View.GONE
+                filePath?.let {
+                    Log.d("WhiteboardActivity", "Loaded file path: $it")
+                    Toast.makeText(this, "Whiteboard loaded successfully", Toast.LENGTH_SHORT).show()
+                } ?: run {
+                    if (intent.getStringExtra("file_path") != null) {
+                        Log.e("WhiteboardActivity", "Failed to load file: ${intent.getStringExtra("file_path")}")
+                        Toast.makeText(this, "Failed to load whiteboard file. Check file or permissions.", Toast.LENGTH_LONG).show()
                     }
                 }
-            }
-
-            // Draw shapes
-            whiteboardState.shapes.forEach { shape ->
-                val p = Paint().apply {
-                    color = Color.parseColor(shape.color)
-                    style = Paint.Style.STROKE
-                    strokeWidth = 5f
-                    isAntiAlias = true
+            } else if (isSaving) {
+                isSaving = false
+                progressBar?.visibility = View.GONE
+                filePath?.let {
+                    Log.d("WhiteboardActivity", "Saved file path: $it")
+                    Toast.makeText(this, "Whiteboard saved successfully", Toast.LENGTH_SHORT).show()
+                } ?: run {
+                    Log.e("WhiteboardActivity", "Failed to save file")
+                    Toast.makeText(this, "Failed to save whiteboard file", Toast.LENGTH_LONG).show()
                 }
-                shape.bounds?.let { b ->
-                    val rect = RectF(b.left, b.top, b.right, b.bottom)
-                    canvas.drawRect(rect, p)
-                }
+            } else {
+                Log.w("WhiteboardActivity", "savedFile triggered but neither loading nor saving")
             }
-
-            // Draw text boxes
-            whiteboardState.textBoxes.forEach { tb ->
-                val p = Paint().apply {
-                    color = Color.parseColor(tb.color)
-                    textSize = tb.textSize.toFloat()
-                    isAntiAlias = true
-                }
-                canvas.drawText(tb.text, tb.bounds.left, tb.bounds.top + tb.textSize, p)
-            }
-
-            // Draw current stroke
-            if (currentStroke.size > 1) {
-                for (i in 0 until currentStroke.size - 1) {
-                    val pt1 = currentStroke[i]
-                    val pt2 = currentStroke[i + 1]
-                    canvas.drawLine(pt1.x, pt1.y, pt2.x, pt2.y, paint)
-                }
-            }
-        }
-
-        override fun onTouchEvent(event: MotionEvent): Boolean {
-            val point = PointF(event.x, event.y)
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> currentStroke.clear()
-                MotionEvent.ACTION_MOVE -> currentStroke.add(point)
-                MotionEvent.ACTION_UP -> {
-                    currentStroke.add(point)
-
-                    // Convert currentStroke to model Point list
-                    val strokePoints = currentStroke.map { pt ->
-                        com.example.whiteboard.models.Point(pt.x, pt.y)
-                    }
-
-                    whiteboardState = whiteboardState.copy(
-                        strokes = whiteboardState.strokes + Stroke(
-                            points = strokePoints,
-                            color = String.format("#%06X", 0xFFFFFF and paint.color), // hex string
-                            width = paint.strokeWidth
-                        )
-                    )
-
-                    currentStroke.clear()
-                }
-            }
-            invalidate()
-            return true
         }
     }
 
-
-    // Call this to save whiteboard state
-    private fun saveWhiteboard() {
-        fileService.save(whiteboardState)
+    // Public method to start saving
+    fun startSaving() {
+        isSaving = true
+        findViewById<ProgressBar>(R.id.progressBar)?.visibility = View.VISIBLE
+        Log.d("WhiteboardActivity", "Started saving operation")
     }
 
-    // Optional: open file picker activity to load JSON
-    private fun openFile(filePath: String) {
-        val intent = Intent(this, WhiteboardActivity::class.java)
-        intent.putExtra("file_path", filePath)
-        startActivity(intent)
-        finish()
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Log.d("WhiteboardActivity", "Permission granted, initiating save")
+            startSaving()
+            viewModel.save(this)
+        } else {
+            Log.e("WhiteboardActivity", "Storage permission denied")
+            Toast.makeText(this, "Storage permission denied", Toast.LENGTH_LONG).show()
+        }
     }
 }
+
+
+
+

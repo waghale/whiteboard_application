@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 
 @Serializable
-data class Point(val x: Float, val y: Float)
+data class Point(var x: Float, var y: Float)
 
 
 

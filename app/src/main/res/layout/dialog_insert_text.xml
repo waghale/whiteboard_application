@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- EditText for user input -->
+        <EditText
+            android:textColor="@color/black"
+            android:id="@+id/editText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter text here"
+            android:inputType="text"
+            android:padding="8dp"
+            android:background="@android:drawable/edit_text"
+            android:textSize="16sp"/>
+
+        <!-- Color selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Choose Color:"
+            android:textSize="14sp"
+            android:layout_marginTop="12dp"/>
+
+        <GridLayout
+            android:id="@+id/colorGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="6"
+            android:rowCount="1"
+            android:layout_marginTop="8dp"
+            android:alignmentMode="alignMargins"
+            android:columnOrderPreserved="false"/>
+
+        <!-- Font size selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Choose Font Size:"
+            android:textSize="14sp"
+            android:layout_marginTop="16dp"/>
+
+        <GridLayout
+            android:id="@+id/sizeGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:rowCount="1"
+            android:layout_marginTop="8dp"
+            android:alignmentMode="alignMargins"
+            android:columnOrderPreserved="false"/>
+
+    </LinearLayout>
+</ScrollView>

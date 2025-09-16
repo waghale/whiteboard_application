@@ -62,4 +62,5 @@ dependencies {
     implementation ("androidx.fragment:fragment-ktx:1.8.9")
     implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
     implementation ("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation ("com.google.code.gson:gson:2.10.1")
 }

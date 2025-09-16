@@ -7,9 +7,10 @@ import java.util.UUID
 
 @Serializable
 data class Stroke(
-    val id: String = UUID.randomUUID().toString(),
-    val points: List<Point> = emptyList(),
-    val color: String,
-    val width: Float,
-    val isEraser: Boolean = false
+    var id: String = UUID.randomUUID().toString(),
+    var points: List<Point> = emptyList(),
+    var color: String,
+    var width: Float,
+    var isEraser: Boolean = false,
+    var rotationAngle: Float = 0f
 )

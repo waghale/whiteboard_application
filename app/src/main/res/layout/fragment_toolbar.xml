@@ -55,8 +55,31 @@
             android:id="@+id/btn_select_move"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Select &amp; Move"
-            android:visibility="gone" />
+            android:text="Select Area"
+            android:visibility="visible" />
+
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp" />
+
+        <Button
+            android:id="@+id/btn_rotate_left"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⟲ Rotate Left" />
+
+        <Button
+            android:id="@+id/btn_rotate_right"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⟳ Rotate Right" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp" />
+
+
 
         <View
             android:layout_width="match_parent"
